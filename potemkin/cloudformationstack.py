@@ -44,7 +44,7 @@ class CloudFormationStack:
                 template_body=initial_condition_cfn_template_content
             )
 
-            user_defined_test_function(stack_outputs)
+            user_defined_test_function(stack_outputs, qualified_stack_name)
 
             if self._teardown:
                 self._delete_stack(

@@ -8,7 +8,7 @@ import boto3
   parameters={'BucketName': 'unclefreddie33388'},
   teardown=False
 )
-def test_bucket_has_aes256_encryption(stack_outputs):
+def test_bucket_has_aes256_encryption(stack_outputs, stack_name):
   full_bucket_name = stack_outputs['BucketNameOut']
 
   s3 = boto3.Session().client('s3')
