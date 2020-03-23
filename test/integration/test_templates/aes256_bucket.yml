@@ -1,0 +1,17 @@
+Parameters:
+  BucketName:
+    Type: String
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${BucketName}-a
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+           - ServerSideEncryptionByDefault:
+               SSEAlgorithm: AES256
+
+Outputs:
+  BucketNameOut:
+    Value: !Ref S3Bucket
