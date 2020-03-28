@@ -48,7 +48,7 @@ def config_rule_wait_for_resource(configservice, resource_id, rule_name):
     attempts = 0
     while True:
         compliance_result = [
-            result 
+            result
             for result in all_rule_results(configservice, rule_name)
             if result['EvaluationResultIdentifier']
             ['EvaluationResultQualifier']['ResourceId'] == resource_id
@@ -84,7 +84,10 @@ def evaluate_config_rule_and_wait_for_resource(configservice, resource_id,
     """
     try:
         _ = configservice.start_config_rules_evaluation(
-            ConfigRuleNames=[rule_name])
+            ConfigRuleNames=[
+                rule_name
+            ]
+        )
     except configservice.exceptions.LimitExceededException:
         # if throttled, just wait anyways
         pass
