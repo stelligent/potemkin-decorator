@@ -1,9 +1,9 @@
 """ Utilities for writing integration tests around AWS Config service """
 import time
 
+
 MAX_ATTEMPTS = 50
 WAIT_PERIOD = 20
-
 
 def all_rule_results(configservice, rule_name):
     """ Return details for the given config rule, and deal with slurping all the results
@@ -21,7 +21,7 @@ def all_rule_results(configservice, rule_name):
         ]
     )
     return [
-        evaluation_result 
+        evaluation_result
         for page in page_iterator
         for evaluation_result in page['EvaluationResults']
     ]
