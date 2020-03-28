@@ -18,11 +18,11 @@ def all_rule_results(configservice, rule_name):
             'NON_COMPLIANT',
             'COMPLIANT',
             'NOT_APPLICABLE'
-            ]
-        )
+        ]
+    )
     return [
-        evaluation_result for 
-        page in page_iterator
+        evaluation_result 
+        for page in page_iterator
         for evaluation_result in page['EvaluationResults']
     ]
 
@@ -50,8 +50,7 @@ def config_rule_wait_for_resource(configservice, resource_id, rule_name):
         compliance_result = [
             result
             for result in all_rule_results(configservice, rule_name)
-            if result['EvaluationResultIdentifier']
-            ['EvaluationResultQualifier']['ResourceId'] == resource_id
+            if result['EvaluationResultIdentifier']['EvaluationResultQualifier']['ResourceId'] == resource_id
         ]
         if compliance_result:
             return compliance_result[0]
