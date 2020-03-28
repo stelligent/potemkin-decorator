@@ -11,13 +11,18 @@ def all_rule_results(configservice, rule_name):
     :param configservice: boto client for AWS Config
     :param rule_name: name of rule to get compliance details for
     :returns: slurped version of get_compliance_details_by_config_rule response """
-    paginator = configservice.get_paginator(
-        'get_compliance_details_by_config_rule')
+    paginator = configservice.get_paginator('get_compliance_details_by_config_rule')
     page_iterator = paginator.paginate(
         ConfigRuleName=rule_name,
-        ComplianceTypes=['NON_COMPLIANT', 'COMPLIANT', 'NOT_APPLICABLE'])
+        ComplianceTypes=[
+            'NON_COMPLIANT',
+            'COMPLIANT',
+            'NOT_APPLICABLE'
+            ]
+        )
     return [
-        evaluation_result for page in page_iterator
+        evaluation_result for 
+        page in page_iterator
         for evaluation_result in page['EvaluationResults']
     ]
 
@@ -43,12 +48,12 @@ def config_rule_wait_for_resource(configservice, resource_id, rule_name):
     attempts = 0
     while True:
         compliance_result = [
-            result for result in all_rule_results(configservice, rule_name)
+            result 
+            for result in all_rule_results(configservice, rule_name)
             if result['EvaluationResultIdentifier']
             ['EvaluationResultQualifier']['ResourceId'] == resource_id
         ]
         if compliance_result:
-            print(f'compliance_result {compliance_result}')
             return compliance_result[0]
         else:
             attempts += 1
