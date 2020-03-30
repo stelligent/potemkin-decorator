@@ -32,6 +32,8 @@ The CloudFormationStack creates the stack and binds the outputs to stack_outputs
 could invoke more boto code to manipulate the resources created by the decorator.  In this case,
 the test just asserts that the initial condition is what is expected.
 
+This is basically a python/pytest port of "aws-int-test-rspec-helper" that worked with Ruby/RSpec:
+* https://github.com/stelligent/aws-int-test-rspec-helper/
 
 ## Service Specific Usage
 
