@@ -3,7 +3,7 @@ import time
 import json
 
 
-MAX_ATTEMPTS = 50
+MAX_ATTEMPTS = 45
 WAIT_PERIOD = 20
 
 def all_rule_results(configservice, rule_name):
@@ -51,7 +51,7 @@ def config_rule_wait_for_absent_resources(configservice, rule_name, resource_ids
                                           wait_period=WAIT_PERIOD, max_attempts=MAX_ATTEMPTS):
     """
     Wait for resource_ids to be removed from AWS Config results.
-    Waits for up to 15 minutes before timing out
+    Default timeout is 15 minutes
 
     :param configservice: boto client for interfacing with AWS Config service
     :param rule_name: config rule to evaluate
@@ -89,12 +89,12 @@ def _present_config_results(config_records, resource_ids):
     return found_ids
 
 
-def config_rule_wait_for_compliance_results(configservice, rule_name, expected_results
+def config_rule_wait_for_compliance_results(configservice, rule_name, expected_results,
                                             wait_period=WAIT_PERIOD, max_attempts=MAX_ATTEMPTS,
                                             evaluate=False):
     """ 
     Wait for all resource_ids to show up in config_results, then compare config_results
-    to to expected_results. Waits for up to 15 minutes before timing out.
+    to to expected_results. Default timeout is 15 minutes
 
     :param configservice: boto client for interfacing with AWS Config service
     :param rule_name: config rule to evaluate
@@ -107,7 +107,7 @@ def config_rule_wait_for_compliance_results(configservice, rule_name, expected_r
     """
 
     if evaluate:
-        _start_evaluations()
+        _start_evaluations(configservice, rule_name)
 
     resource_ids = list(expected_results.keys())
     resource_id_count = len(resource_ids)
@@ -158,7 +158,7 @@ def config_rule_wait_for_resource(configservice, resource_id, rule_name):
             else:
                 time.sleep(WAIT_PERIOD)
 
-def _start_evaluations():
+def _start_evaluations(configservice, rule_name):
     """ Start configuration rule evaluations """
     try:
         _ = configservice.start_config_rules_evaluation(
@@ -190,5 +190,5 @@ def evaluate_config_rule_and_wait_for_resource(configservice, resource_id,
              get_compliance_details_by_config_rule
     """
 
-    _start_evaluations()
+    _start_evaluations(configservice, rule_name)
     return config_rule_wait_for_resource(configservice, resource_id, rule_name)
