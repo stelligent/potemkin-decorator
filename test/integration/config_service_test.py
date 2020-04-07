@@ -58,7 +58,7 @@ def test_wait_for_compliance_results_fail_results_removed():
 @potemkin.CloudFormationStack(
     'test/integration/test_templates/eip.yml',
     stack_name_stem='EipTestStack'
-    )
+)
 def test_config_rule_with_evaluate(stack_outputs, stack_name):
     eipalloc = stack_outputs['EIPOutput']
     configservice = boto3.Session().client('config')
@@ -75,16 +75,16 @@ def test_config_rule_with_evaluate(stack_outputs, stack_name):
 @potemkin.CloudFormationStack(
     'test/integration/test_templates/eip.yml',
     stack_name_stem='EipTestStack'
-    )
+)
 def test_config_rules_no_evaluate(stack_outputs, stack_name):
     eipalloc = stack_outputs['EIPOutput']
     configservice = boto3.Session().client('config')
 
     actual_result = config_rule_wait_for_resource(
         configservice,
-            resource_id=eipalloc,
-            rule_name='eip-attached'
-        )
+        resource_id=eipalloc,
+        rule_name='eip-attached'
+    )
 
     expected_compliance_type = 'NON_COMPLIANT'
     assert actual_result['ComplianceType'] == expected_compliance_type
