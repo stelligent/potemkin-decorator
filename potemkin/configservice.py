@@ -1,5 +1,6 @@
 """ Utilities for writing integration tests around AWS Config service """
 import time
+import json
 
 
 MAX_ATTEMPTS = 50
@@ -18,13 +19,109 @@ def all_rule_results(configservice, rule_name):
             'NON_COMPLIANT',
             'COMPLIANT',
             'NOT_APPLICABLE'
-        ]
-    )
+            ]
+        )
     return [
         evaluation_result
         for page in page_iterator
         for evaluation_result in page['EvaluationResults']
     ]
+
+
+def _remove_missing_resource_ids(config_records, resource_ids):
+    """
+    Remove resource_ids found in config_results and return any remaining resource_ids
+    
+    :param config_records: config compliance records
+    :param resource_ids: list of resource ids
+    :returns: list of resource IDs found in compliance records
+    """
+    resources_in_config = []
+
+    for config_record in config_records:
+        config_record_id = config_record['EvaluationResultIdentifier'][
+            'EvaluationResultQualifier']['ResourceId']
+
+        if config_record_id in resource_ids:
+            resources_in_config.append(config_record_id)
+    return resources_in_config
+
+
+def config_rule_wait_for_absent_resources(configservice, rule_name, resource_ids,
+                                          wait_period=WAIT_PERIOD, max_attempts=MAX_ATTEMPTS):
+    """
+    Wait for resource_ids to be removed from AWS Config results.
+    Waits for up to 15 minutes before timing out
+
+    :param configservice: boto client for interfacing with AWS Config service
+    :param rule_name: config rule to evaluate
+    :param wait_period: period to wait between checks
+    :return: empty list if all resource_ids are absent. If timeout, return list of remaining ids.
+
+    :param wait_period: length of wait period (optional)
+    :param max_attempts: number of attempts before timeout (optional)
+    """
+    for _ in range(max_attempts):
+        config_records = all_rule_results(configservice, rule_name)
+        remaining_ids = _remove_missing_resource_ids(config_records, resource_ids)
+        if not remaining_ids:
+            return []
+        time.sleep(wait_period)
+    print(f'TIMEOUT waiting for these resources to disappear: {remaining_ids}')
+    return remaining_ids
+
+
+def _present_config_results(config_records, resource_ids):
+    """ 
+    If resource_id is in config_results add to dictionary and return dictionary
+    
+    :param config_records: config compliance records
+    :param resource_ids: list of resource ids
+    :returns: dictionary of resource_id: compliance_type
+    """
+    found_ids = {}
+    for config_records in config_records:
+        config_record_id = config_records['EvaluationResultIdentifier'][
+            'EvaluationResultQualifier']['ResourceId']
+
+        if config_record_id in resource_ids:
+            found_ids[config_record_id] = config_records["ComplianceType"]
+    return found_ids
+
+
+def config_rule_wait_for_compliance_results(configservice, rule_name, expected_results
+                                            wait_period=WAIT_PERIOD, max_attempts=MAX_ATTEMPTS,
+                                            evaluate=False):
+    """ 
+    Wait for all resource_ids to show up in config_results, then compare config_results
+    to to expected_results. Waits for up to 15 minutes before timing out.
+
+    :param configservice: boto client for interfacing with AWS Config service
+    :param rule_name: config rule to evaluate
+    :param expected_results: dictionary of expected results in format resource_id: COMPLIANT|NON_COMPLIANT
+    :return: test results compared to actual results. If timeout results are partial.
+
+    :param wait_period: length of wait period (optional)
+    :param max_attempts: number of attempts before timeout (optional)
+    :param evaluate: If True, initiate a config rule evaluation. Use for periodic rules. (optional)
+    """
+
+    if evaluate:
+        _start_evaluations()
+
+    resource_ids = list(expected_results.keys())
+    resource_id_count = len(resource_ids)
+    for _ in range(max_attempts):
+        config_records = all_rule_results(configservice, rule_name)
+
+        actual_results = _present_config_results(config_records, resource_ids)
+        if len(actual_results) == resource_id_count:
+            break
+        time.sleep(wait_period)
+
+    print(f'actual_results = {json.dumps(actual_results, indent=4)}')
+    print(f'expected_results = {json.dumps(expected_results, indent=4)}')
+    return actual_results == expected_results
 
 
 def config_rule_wait_for_resource(configservice, resource_id, rule_name):
@@ -48,7 +145,7 @@ def config_rule_wait_for_resource(configservice, resource_id, rule_name):
     attempts = 0
     while True:
         compliance_result = [
-            result
+            result 
             for result in all_rule_results(configservice, rule_name)
             if result['EvaluationResultIdentifier']['EvaluationResultQualifier']['ResourceId'] == resource_id
         ]
@@ -61,6 +158,17 @@ def config_rule_wait_for_resource(configservice, resource_id, rule_name):
             else:
                 time.sleep(WAIT_PERIOD)
 
+def _start_evaluations():
+    """ Start configuration rule evaluations """
+    try:
+        _ = configservice.start_config_rules_evaluation(
+            ConfigRuleNames=[
+                rule_name
+            ]
+        )
+    except configservice.exceptions.LimitExceededException:
+        # if throttled, just wait anyways
+        pass
 
 def evaluate_config_rule_and_wait_for_resource(configservice, resource_id,
                                                rule_name):
@@ -81,14 +189,6 @@ def evaluate_config_rule_and_wait_for_resource(configservice, resource_id,
     :return: None if resource never shows up, otherwise the EvaluationResult from call to
              get_compliance_details_by_config_rule
     """
-    try:
-        _ = configservice.start_config_rules_evaluation(
-            ConfigRuleNames=[
-                rule_name
-            ]
-        )
-    except configservice.exceptions.LimitExceededException:
-        # if throttled, just wait anyways
-        pass
 
+    _start_evaluations()
     return config_rule_wait_for_resource(configservice, resource_id, rule_name)
