@@ -67,7 +67,7 @@ def test_config_rule_with_evaluate(stack_outputs, stack_name):
         configservice,
         resource_id=eipalloc,
         rule_name='eip-attached'
-        )
+    )
 
     expected_compliance_type = 'NON_COMPLIANT'
     assert actual_result['ComplianceType'] == expected_compliance_type
