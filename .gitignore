@@ -4,3 +4,4 @@ build
 *egg*
 **/*.pyc
 __pycache__
+.vscode

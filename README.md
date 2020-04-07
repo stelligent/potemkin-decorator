@@ -44,9 +44,47 @@ AWS Config initiates evaluations when a resource is created, but the evaluations
 asynchronously. They can take several minutes to complete. The AWS config functions wait until 
 the config rule has an evaluation for the resource, then returns the evaluation.
 
+### config_rule_wait_for_compliance_results ###
+This function polls aws config until all resource_ids have evaluations. It then checks those evaluations
+against expected results and returns a truthy value. This can be used by both configuration
+change events and periodic events (by setting evaluate=True)
+
+
+```
+@potemkin.CloudFormationStack('test/integration/test_templates/eip.yml',
+                              stack_name_stem='EipTestStack')
+def test_wait_for_compliance_results(stack_outputs, stack_name):
+    global expected_results
+    configservice = boto3.Session().client('config')
+
+    expected_results_success = {
+        stack_outputs['EIPOutput']: "NON_COMPLIANT",
+        stack_outputs['EIP2Output']: "NON_COMPLIANT"
+    }
+
+    assert config_rule_wait_for_compliance_results(
+        configservice,
+        rule_name='eip-attached',
+        expected_results=expected_results_success)
+```
+
+### config_rule_wait_for_absent_resources ###
+This function is a companion to config_rule_wait_for_compliance_results and is used to validate that
+once resources are deleted they are removed from AWS config. 
+
+```
+def test_wait_for_compliance_results_success_results():
+    configservice = boto3.Session().client('config')
+    resource_ids = list(expected_results.keys())
+
+    assert [] == config_rule_wait_for_absent_resources(
+        configservice, rule_name='eip-attached', resource_ids=resource_ids)
+```
+
 #### config_rule_wait_for_resource ####
 This function polls aws config until there is an evaluation for the resource, then returns it. Use this 
-function for config rules with a configuration change trigger.
+function for config rules with a configuration change trigger. If you are checking more than one 
+resource, consider using config_rule_wait_for_compliance_results.
 
 ```
 import potemkin
@@ -71,7 +109,8 @@ def test_bucket_encryption_rule(stack_outputs, stack_name):
 
 #### evaluate_config_rule_and_wait_for_resource ####
 This is similar to config_rule_wait_for_resource but it first initiates a config evaluation. Use this 
-for config rules with a periodic trigger.
+for config rules with a periodic trigger. If you are checking more than one 
+resource, consider using config_rule_wait_for_compliance_results.
 
 ```
 import potemkin

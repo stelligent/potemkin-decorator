@@ -4,6 +4,13 @@ Resources:
     Properties:
       Domain: vpc
 
+  EIP2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
 Outputs:
   EIPOutput:
     Value: !GetAtt EIP.AllocationId
+  EIP2Output:
+    Value: !GetAtt EIP2.AllocationId
