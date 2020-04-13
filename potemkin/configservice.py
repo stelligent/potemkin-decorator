@@ -6,6 +6,7 @@ import json
 MAX_ATTEMPTS = 45
 WAIT_PERIOD = 20
 
+
 def all_rule_results(configservice, rule_name):
     """ Return details for the given config rule, and deal with slurping all the results
 
@@ -111,14 +112,14 @@ def config_rule_wait_for_compliance_results(configservice, rule_name, expected_r
 
     resource_ids = list(expected_results.keys())
     resource_id_count = len(resource_ids)
-    for _ in range(max_attempts):
+    for loop in range(max_attempts):
         config_records = all_rule_results(configservice, rule_name)
 
         actual_results = _present_config_results(config_records, resource_ids)
         if len(actual_results) == resource_id_count:
             break
         time.sleep(wait_period)
-
+    print(f'Total sleep Time = {(loop - 1) * wait_period}')
     print(f'actual_results = {json.dumps(actual_results, indent=4)}')
     print(f'expected_results = {json.dumps(expected_results, indent=4)}')
     return actual_results == expected_results
