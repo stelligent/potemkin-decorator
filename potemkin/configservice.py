@@ -2,10 +2,8 @@
 import time
 import json
 
-
 MAX_ATTEMPTS = 45
 WAIT_PERIOD = 20
-
 
 def all_rule_results(configservice, rule_name):
     """ Return details for the given config rule, and deal with slurping all the results
@@ -13,18 +11,13 @@ def all_rule_results(configservice, rule_name):
     :param configservice: boto client for AWS Config
     :param rule_name: name of rule to get compliance details for
     :returns: slurped version of get_compliance_details_by_config_rule response """
-    paginator = configservice.get_paginator('get_compliance_details_by_config_rule')
+    paginator = configservice.get_paginator(
+        'get_compliance_details_by_config_rule')
     page_iterator = paginator.paginate(
         ConfigRuleName=rule_name,
-        ComplianceTypes=[
-            'NON_COMPLIANT',
-            'COMPLIANT',
-            'NOT_APPLICABLE'
-        ]
-    )
+        ComplianceTypes=['NON_COMPLIANT', 'COMPLIANT', 'NOT_APPLICABLE'])
     return [
-        evaluation_result
-        for page in page_iterator
+        evaluation_result for page in page_iterator
         for evaluation_result in page['EvaluationResults']
     ]
 
@@ -48,8 +41,11 @@ def _remove_missing_resource_ids(config_records, resource_ids):
     return resources_in_config
 
 
-def config_rule_wait_for_absent_resources(configservice, rule_name, resource_ids,
-                                          wait_period=WAIT_PERIOD, max_attempts=MAX_ATTEMPTS):
+def config_rule_wait_for_absent_resources(configservice,
+                                          rule_name,
+                                          resource_ids,
+                                          wait_period=WAIT_PERIOD,
+                                          max_attempts=MAX_ATTEMPTS):
     """
     Wait for resource_ids to be removed from AWS Config results.
     Default timeout is 15 minutes
@@ -64,7 +60,8 @@ def config_rule_wait_for_absent_resources(configservice, rule_name, resource_ids
     """
     for _ in range(max_attempts):
         config_records = all_rule_results(configservice, rule_name)
-        remaining_ids = _remove_missing_resource_ids(config_records, resource_ids)
+        remaining_ids = _remove_missing_resource_ids(config_records,
+                                                     resource_ids)
         if not remaining_ids:
             return []
         time.sleep(wait_period)
@@ -90,8 +87,11 @@ def _present_config_results(config_records, resource_ids):
     return found_ids
 
 
-def config_rule_wait_for_compliance_results(configservice, rule_name, expected_results,
-                                            wait_period=WAIT_PERIOD, max_attempts=MAX_ATTEMPTS,
+def config_rule_wait_for_compliance_results(configservice,
+                                            rule_name,
+                                            expected_results,
+                                            wait_period=WAIT_PERIOD,
+                                            max_attempts=MAX_ATTEMPTS,
                                             evaluate=False):
     """ 
     Wait for all resource_ids to show up in config_results, then compare config_results
@@ -112,14 +112,13 @@ def config_rule_wait_for_compliance_results(configservice, rule_name, expected_r
 
     resource_ids = list(expected_results.keys())
     resource_id_count = len(resource_ids)
-    for loop in range(max_attempts):
+    for _ in range(max_attempts):
         config_records = all_rule_results(configservice, rule_name)
 
         actual_results = _present_config_results(config_records, resource_ids)
         if len(actual_results) == resource_id_count:
             break
         time.sleep(wait_period)
-    print(f'Total sleep Time = {(loop - 1) * wait_period}')
     print(f'actual_results = {json.dumps(actual_results, indent=4)}')
     print(f'expected_results = {json.dumps(expected_results, indent=4)}')
     return actual_results == expected_results
@@ -146,9 +145,9 @@ def config_rule_wait_for_resource(configservice, resource_id, rule_name):
     attempts = 0
     while True:
         compliance_result = [
-            result
-            for result in all_rule_results(configservice, rule_name)
-            if result['EvaluationResultIdentifier']['EvaluationResultQualifier']['ResourceId'] == resource_id
+            result for result in all_rule_results(configservice, rule_name)
+            if result['EvaluationResultIdentifier']
+            ['EvaluationResultQualifier']['ResourceId'] == resource_id
         ]
         if compliance_result:
             return compliance_result[0]
@@ -159,17 +158,16 @@ def config_rule_wait_for_resource(configservice, resource_id, rule_name):
             else:
                 time.sleep(WAIT_PERIOD)
 
+
 def _start_evaluations(configservice, rule_name):
     """ Start configuration rule evaluations """
     try:
         _ = configservice.start_config_rules_evaluation(
-            ConfigRuleNames=[
-                rule_name
-            ]
-        )
+            ConfigRuleNames=[rule_name])
     except configservice.exceptions.LimitExceededException:
         # if throttled, just wait anyways
         pass
+
 
 def evaluate_config_rule_and_wait_for_resource(configservice, resource_id,
                                                rule_name):
