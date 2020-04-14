@@ -119,6 +119,7 @@ def config_rule_wait_for_compliance_results(configservice, rule_name, expected_r
         if len(actual_results) == resource_id_count:
             break
         time.sleep(wait_period)
+
     print(f'actual_results = {json.dumps(actual_results, indent=4)}')
     print(f'expected_results = {json.dumps(expected_results, indent=4)}')
     return actual_results == expected_results
