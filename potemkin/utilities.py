@@ -34,7 +34,6 @@ def wait_until_true(function, wait_period=20, attempts=15):
 
     def wrapper(*args, **kwargs):
         for _ in range(attempts):
-            print("trying function")
             return_value = function(*args, **kwargs)
             if return_value:
                 return return_value

@@ -6,7 +6,6 @@ import json
 MAX_ATTEMPTS = 45
 WAIT_PERIOD = 20
 
-
 def all_rule_results(configservice, rule_name):
     """ Return details for the given config rule, and deal with slurping all the results
 
