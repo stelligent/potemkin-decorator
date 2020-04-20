@@ -14,13 +14,16 @@ class CloudFormationStack:
                  stack_name_stem=None,
                  parameters=None,
                  aws_profile=None,
-                 teardown=True):
+                 teardown=True,
+                 teardown_fail=True):
         """ Constructor
 
-        :param relative_path_to_initial_condition_cfn_template: The person to say hello to.
-        :param stack_name_stem: The person to say hello to.
-        :param parameters: The person to say hello to.
-        :param aws_profile: The person to say hello to. """
+        :param relative_path_to_initial_condition_cfn_template: The relative path/name to the CloudFormation template to create.
+        :param stack_name_stem: CloudFormation stack name stem.  Combined with a timestamp to produce full stack name.
+        :param parameters: Parameters to pass to CloudFormation.
+        :param aws_profile: The aws profile to use. If None, uses current environment.
+        :param teardown: Teardown resources after test completion. (default True)
+        :param teardown_fail: Teardown resources after tests complete with one or more failure. If False, overrides teardown. (default True)"""
         self._relative_path_to_initial_condition_cfn_template = relative_path_to_initial_condition_cfn_template
         self._stack_name = stack_name_stem
         self._aws_profile = aws_profile
@@ -29,6 +32,7 @@ class CloudFormationStack:
             self._parameters = {}
         self._cloudformation_client = None
         self._teardown = teardown
+        self._teardown_fail = teardown_fail
 
     def __call__(self, user_defined_test_function):
         """ The heart of the matter to spin up the stack, invoke the pytest function and then teardown """
@@ -44,7 +48,14 @@ class CloudFormationStack:
                 template_body=initial_condition_cfn_template_content
             )
 
-            user_defined_test_function(stack_outputs, qualified_stack_name)
+
+            try:
+                user_defined_test_function(stack_outputs, qualified_stack_name)
+            except Exception as error:
+                print(error)
+                if self._teardown and self._teardown_fail:
+                    self._delete_stack(stack_name=qualified_stack_name)
+                raise
 
             if self._teardown:
                 self._delete_stack(

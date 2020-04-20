@@ -23,7 +23,7 @@ class TerraformResources:
         :param parameters: Parameters to pass to terraform (requires variable block in terraform).
         :param aws_profile: The aws profile to use. If None, uses current environment.
         :param teardown: Teardown resources after test completion. (default True)
-        :param teardown_fail: Teardown resources after tests complete with one or more failure. If False, overrides teardown (default True)"""
+        :param teardown_fail: Teardown resources after tests complete with one or more failure. If False, overrides teardown. (default True)"""
 
         self._relative_path_to_terraform_root = relative_path_to_terraform_root
         self._aws_profile = aws_profile
@@ -44,8 +44,7 @@ class TerraformResources:
                     tf_outputs=self._terraform_outputs())
             except Exception as error:
                 print(error)
-                self._teardown = self._teardown_fail if not self._teardown_fail else self._teardown
-                if self._teardown:
+                if self._teardown and self._teardown_fail:
                     self._terraform('destroy -auto-approve')
                 raise
 
