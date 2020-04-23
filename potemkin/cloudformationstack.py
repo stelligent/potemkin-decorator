@@ -3,7 +3,9 @@ CloudFromationStack decorator
 """
 import time
 import os
+import sys
 import boto3
+from botocore.exceptions import WaiterError
 
 
 class CloudFormationStack:
@@ -79,6 +81,9 @@ class CloudFormationStack:
         """ Given the response from DescribeStacks, transform the outputs into a dictionary
 
         :param stack_dict: response from DescribeStacks """
+        if stack_dict["StackStatus"] != "CREATE_COMPLETE":
+            print(f'Stack did not create successfully.  Error  message: {stack_dict["StackStatusReason"]}')
+            sys.exit()
         return {
             output['OutputKey']: output['OutputValue']
             for output in stack_dict['Outputs']
@@ -138,10 +143,13 @@ class CloudFormationStack:
             OnFailure='DO_NOTHING'
         )
         waiter = cloudformation.get_waiter('stack_create_complete')
-        waiter.wait(
-            StackName=stack_name,
-            WaiterConfig=self._waiter_config()
-        )
+        try:
+            waiter.wait(
+                StackName=stack_name,
+                WaiterConfig=self._waiter_config()
+            )
+        except WaiterError:
+            pass
 
         describe_stacks_response = cloudformation.describe_stacks(
             StackName=stack_name
