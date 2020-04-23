@@ -82,7 +82,7 @@ class CloudFormationStack:
 
         :param stack_dict: response from DescribeStacks """
         if stack_dict["StackStatus"] != "CREATE_COMPLETE":
-            print(f'Stack did not create successfully.  Error  message: {stack_dict["StackStatusReason"]}')
+            print(f'Stack creation error: {stack_dict["StackStatusReason"]}')
             sys.exit()
         return {
             output['OutputKey']: output['OutputValue']
