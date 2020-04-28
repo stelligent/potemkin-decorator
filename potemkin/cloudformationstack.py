@@ -16,7 +16,8 @@ class CloudFormationStack:
                  parameters=None,
                  aws_profile=None,
                  teardown=True,
-                 teardown_fail=True):
+                 teardown_fail=True,
+                 timeout=5):
         """ Constructor
 
         :param relative_path_to_initial_condition_cfn_template: The relative path/name to the CloudFormation template to create.
@@ -24,7 +25,8 @@ class CloudFormationStack:
         :param parameters: Parameters to pass to CloudFormation.
         :param aws_profile: The aws profile to use. If None, uses current environment.
         :param teardown: Teardown resources after test completion. (default True)
-        :param teardown_fail: Teardown resources after tests complete with one or more failure. If False, overrides teardown. (default True)"""
+        :param teardown_fail: Teardown resources after tests complete with one or more failure. If False, overrides teardown. (default True)
+        :param timeout: Cloudformation and Config Waiter timeout in minutes (default 5)"""
         self._relative_path_to_initial_condition_cfn_template = relative_path_to_initial_condition_cfn_template
         self._stack_name = stack_name_stem
         self._aws_profile = aws_profile
@@ -34,6 +36,7 @@ class CloudFormationStack:
         self._cloudformation_client = None
         self._teardown = teardown
         self._teardown_fail = teardown_fail
+        self._timeout = timeout
 
     def __call__(self, user_defined_test_function):
         """ The heart of the matter to spin up the stack, invoke the pytest function and then teardown """
@@ -103,8 +106,8 @@ class CloudFormationStack:
     def _waiter_config(self):
         """ stock waiter config to use for all calls to CloudFormation service """
         return {
-            'Delay': 17,
-            'MaxAttempts': 15
+            'Delay': 20,
+            'MaxAttempts': self._timeout * 3
         }
 
     def _delete_stack(self, stack_name):
@@ -134,7 +137,7 @@ class CloudFormationStack:
             StackName=stack_name,
             TemplateBody=template_body,
             Parameters=self._convert_parameters(parameters),
-            TimeoutInMinutes=5,
+            TimeoutInMinutes=self._timeout,
             Capabilities=[
                 'CAPABILITY_NAMED_IAM',
                 'CAPABILITY_AUTO_EXPAND'

@@ -7,7 +7,8 @@ import boto3
     stack_name_stem='TestStack',
     parameters={'BucketName': 'unclefreddie33388'},
     teardown=True,
-    teardown_fail=True)
+    teardown_fail=True,
+    timeout=4)
 def test_bucket_has_aes256_encryption(stack_outputs, stack_name):
     full_bucket_name = stack_outputs['BucketNameOut']
 
