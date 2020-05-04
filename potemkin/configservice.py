@@ -48,7 +48,7 @@ def _remove_missing_resource_ids(config_records, resource_ids):
 
 
 def config_rule_wait_for_absent_resources(configservice, rule_name, resource_ids,
-                                          wait_period=WAIT_PERIOD, max_attempts=MAX_ATTEMPTS):
+                                          wait_period=WAIT_PERIOD, max_attempts=MAX_ATTEMPTS, evaluate=False):
     """
     Wait for resource_ids to be removed from AWS Config results.
     Default timeout is 15 minutes
@@ -60,7 +60,12 @@ def config_rule_wait_for_absent_resources(configservice, rule_name, resource_ids
 
     :param wait_period: length of wait period (optional)
     :param max_attempts: number of attempts before timeout (optional)
+    :param evaluate: If True, initiate a config rule evaluation. Use for periodic rules. (optional)
     """
+
+    if evaluate:
+        _start_evaluations(configservice, rule_name)
+
     for _ in range(max_attempts):
         config_records = all_rule_results(configservice, rule_name)
         remaining_ids = _remove_missing_resource_ids(config_records, resource_ids)

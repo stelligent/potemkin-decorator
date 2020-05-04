@@ -79,12 +79,39 @@ class CloudFormationStack:
 
         return self._cloudformation_client
 
-    def _stack_outputs(self, stack_dict):
-        """ Given the response from DescribeStacks, transform the outputs into a dictionary
+    def _filter_stack_resources(self, stack_name, resource_status):
+        """ filter stack resources for a given resource status
 
-        :param stack_dict: response from DescribeStacks """
-        if stack_dict["StackStatus"] != "CREATE_COMPLETE":
-            print(f'Stack creation error: {stack_dict["StackStatusReason"]}')
+        :param resource_status: resource_status to show
+        """
+    
+        response = ''
+        cloudformation = self._cloudformation()
+        stack_resources = cloudformation.describe_stack_resources(StackName=stack_name)
+        for resource in stack_resources["StackResources"]:
+            if resource["ResourceStatus"] == resource_status:
+                response += f'  {resource["LogicalResourceId"]}: {resource.get("ResourceStatusReason", "")}\n'
+        return response
+            
+
+    def _stack_outputs(self, stack_name):
+        """ Transform results of DescribeStacks outputs into a dictionary
+
+        :param stack_name: stack name
+        """
+        cloudformation = self._cloudformation()
+        describe_stacks_response = cloudformation.describe_stacks(StackName=stack_name)
+        stack_dict = describe_stacks_response['Stacks'][0]
+        
+        if stack_dict["StackStatus"] == "CREATE_IN_PROGRESS":
+            events = self._filter_stack_resources(stack_name, 'CREATE_IN_PROGRESS')
+            print('Stack timed out before creation was completed. Increase the timeout value on @potemkin.CloudFormationStack')
+            print(f'Resources that are still in progress:\n{events}')
+            raise Exception("StackTimeoutError")
+        elif stack_dict["StackStatus"] != "CREATE_COMPLETE":
+            events = self._filter_stack_resources(stack_name, 'CREATE_FAILED')
+            print(f'Stack creation error: {stack_dict.get("StackStatusReason", "no reason given")}')
+            print(f'Resource creation error details:\n{events}')
             raise Exception("StackCreationError")
         return {
             output['OutputKey']: output['OutputValue']
@@ -153,12 +180,8 @@ class CloudFormationStack:
         except WaiterError:
             pass
 
-        describe_stacks_response = cloudformation.describe_stacks(
-            StackName=stack_name
-        )
-
-        return self._stack_outputs(describe_stacks_response['Stacks'][0])
-
+        return self._stack_outputs(stack_name)
+        
     def _resolve_template_path(self):
         """ Current wd + relative path """
         return os.path.join(
