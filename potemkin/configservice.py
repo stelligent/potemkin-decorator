@@ -78,32 +78,33 @@ def config_rule_wait_for_absent_resources(configservice, rule_name, resource_ids
 
 def _present_config_results(config_records, resource_ids):
     """ 
-    If resource_id is in config_results add to dictionary and return dictionary
+    If resource_id is in config_records add to dictionary and return dictionary
     
     :param config_records: config compliance records
     :param resource_ids: list of resource ids
     :returns: dictionary of resource_id: compliance_type
     """
-    found_ids = {}
+    found_records = {}
     for config_records in config_records:
         config_record_id = config_records['EvaluationResultIdentifier'][
             'EvaluationResultQualifier']['ResourceId']
 
         if config_record_id in resource_ids:
-            found_ids[config_record_id] = config_records["ComplianceType"]
-    return found_ids
+            found_records[config_record_id] = config_records["ComplianceType"]
+    return found_records
 
 
 def config_rule_wait_for_compliance_results(configservice, rule_name, expected_results,
                                             wait_period=WAIT_PERIOD, max_attempts=MAX_ATTEMPTS,
                                             evaluate=False):
     """ 
-    Wait for all resource_ids to show up in config_results, then compare config_results
-    to to expected_results. Default timeout is 15 minutes
+    Wait for the IDs of present expected results (COMPLIANT/NON_COMPLIANT) to show up in the rule's compliance details 
+    and absent expected results (NOT_APPLICABLE) to not show up in the rule's compliance details.
+    Once this happens, compare present results to present expected results. Default timeout is 15 minutes
 
     :param configservice: boto client for interfacing with AWS Config service
     :param rule_name: config rule to evaluate
-    :param expected_results: dictionary of expected results in format resource_id: COMPLIANT|NON_COMPLIANT
+    :param expected_results: dictionary of expected results in format resource_id: COMPLIANT|NON_COMPLIANT|NOT_APPLICABLE
     :return: test results compared to actual results. If timeout results are partial.
 
     :param wait_period: length of wait period (optional)
@@ -114,19 +115,30 @@ def config_rule_wait_for_compliance_results(configservice, rule_name, expected_r
     if evaluate:
         _start_evaluations(configservice, rule_name)
 
-    resource_ids = list(expected_results.keys())
-    resource_id_count = len(resource_ids)
+    expected_absent_ids = []
+    expected_present_ids = []
+    expected_present_results = {}
+    for resource_id, compliance in expected_results.items():
+        if compliance == "NOT_APPLICABLE":
+            expected_absent_ids.append(resource_id)
+        else:
+            expected_present_results[resource_id] = compliance
+            expected_present_ids.append(resource_id)
+    expected_present_count = len(expected_present_ids)
+
     for _ in range(max_attempts):
         config_records = all_rule_results(configservice, rule_name)
 
-        actual_results = _present_config_results(config_records, resource_ids)
-        if len(actual_results) == resource_id_count:
+        actual_present_results = _present_config_results(config_records, expected_present_ids)
+        actual_absent_results = _present_config_results(config_records, expected_absent_ids)
+        if len(actual_present_results) == expected_present_count and len(actual_absent_results) == 0:
             break
         time.sleep(wait_period)
 
-    print(f'actual_results = {json.dumps(actual_results, indent=4)}')
-    print(f'expected_results = {json.dumps(expected_results, indent=4)}')
-    return actual_results == expected_results
+    print(f'not found = {expected_absent_ids}')
+    print(f'actual_results = {json.dumps(actual_present_results, indent=4)}')
+    print(f'expected_results = {json.dumps(expected_present_results, indent=4)}')
+    return actual_present_results == expected_present_results
 
 
 def config_rule_wait_for_resource(configservice, resource_id, rule_name):
