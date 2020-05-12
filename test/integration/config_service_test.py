@@ -12,7 +12,8 @@ def test_wait_for_compliance_results_success(stack_outputs, stack_name):
 
     expected_results_success = {
         stack_outputs['EIPOutput']: "NON_COMPLIANT",
-        stack_outputs['EIP2Output']: "NON_COMPLIANT"
+        stack_outputs['EIP2Output']: "NON_COMPLIANT",
+        "dummy": "NOT_APPLICABLE"
     }
 
     assert config_rule_wait_for_compliance_results(
