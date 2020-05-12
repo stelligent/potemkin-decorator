@@ -98,9 +98,13 @@ def config_rule_wait_for_compliance_results(configservice, rule_name, expected_r
                                             wait_period=WAIT_PERIOD, max_attempts=MAX_ATTEMPTS,
                                             evaluate=False):
     """ 
-    Wait for the IDs of present expected results (COMPLIANT/NON_COMPLIANT) to show up in the rule's compliance details 
-    and absent expected results (NOT_APPLICABLE) to not show up in the rule's compliance details.
-    Once this happens, compare present results to present expected results. Default timeout is 15 minutes
+    Wait for resources to show up in config results and validate that the results are what are expected.
+
+    Splits the expected_results in to those that should be present (COMPLIANT/NON_COMPLIANT) and those that should be 
+    absent (NOT_APPLICABLE).  Wait for the IDs of present expected results to show up in the rule's compliance details. 
+    Then compare complinace details to expected results. Present results must have the same evaluation and absent results 
+    must not be present.
+    Default timeout is 15 minutes
 
     :param configservice: boto client for interfacing with AWS Config service
     :param rule_name: config rule to evaluate
@@ -131,14 +135,15 @@ def config_rule_wait_for_compliance_results(configservice, rule_name, expected_r
 
         actual_present_results = _present_config_results(config_records, expected_present_ids)
         actual_absent_results = _present_config_results(config_records, expected_absent_ids)
-        if len(actual_present_results) == expected_present_count and len(actual_absent_results) == 0:
+        if len(actual_present_results) == expected_present_count:
             break
         time.sleep(wait_period)
 
-    print(f'not found = {expected_absent_ids}')
-    print(f'actual_results = {json.dumps(actual_present_results, indent=4)}')
-    print(f'expected_results = {json.dumps(expected_present_results, indent=4)}')
-    return actual_present_results == expected_present_results
+    print(f'absent resources = {expected_absent_ids}')
+    print(f'absent actual_results = {actual_absent_results}')
+    print(f'present actual_results = {json.dumps(actual_present_results, indent=4)}')
+    print(f'present expected_results = {json.dumps(expected_present_results, indent=4)}')
+    return actual_present_results == expected_present_results and actual_absent_results == {}
 
 
 def config_rule_wait_for_resource(configservice, resource_id, rule_name):
